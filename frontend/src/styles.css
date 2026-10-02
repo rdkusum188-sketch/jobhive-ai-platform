@@ -1,0 +1,173 @@
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:8000';
+
+function App() {
+  const [jobs, setJobs] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [health, setHealth] = useState('Checking backend...');
+
+  useEffect(() => {
+    fetchJobs();
+    checkHealth();
+  }, []);
+
+  const checkHealth = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/health`);
+      setHealth(response.data.status === 'ok' ? 'Backend online' : 'Backend unavailable');
+    } catch (error) {
+      setHealth('Backend unavailable');
+    }
+  };
+
+  const fetchJobs = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/jobs`);
+      setJobs(response.data);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+    }
+  };
+
+  const seedDemoData = async () => {
+    try {
+      await axios.get(`${API_BASE_URL}/seed`);
+      fetchJobs();
+    } catch (error) {
+      console.error('Error seeding demo data:', error);
+    }
+  };
+
+  const runMatch = async (candidateId = 1) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/match/${candidateId}`);
+      setMatches(response.data);
+    } catch (error) {
+      console.error('Error running match:', error);
+      setMatches([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="brand-group">
+          <div className="brand-mark">J</div>
+          <div>
+            <p className="brand-name">JobHive AI</p>
+            <p className="brand-subtitle">Career match platform</p>
+          </div>
+        </div>
+
+        <nav className="nav">
+          <a href="#jobs">Jobs</a>
+          <a href="#matches">AI Match</a>
+          <a href="#about">About</a>
+        </nav>
+      </header>
+
+      <main className="main-content">
+        <section className="hero">
+          <div className="hero-copy">
+            <span className="eyebrow">Smart hiring</span>
+            <h1>Find the right role with AI-powered job matching.</h1>
+            <p>
+              Discover career opportunities based on your skills, experience, and goals.
+            </p>
+            <div className="hero-actions">
+              <button onClick={() => runMatch(1)}>Run AI Match</button>
+              <button className="secondary" onClick={seedDemoData}>Load Demo Data</button>
+            </div>
+            <div className="status-pill">{health}</div>
+          </div>
+
+          <div className="hero-panel">
+            <div className="metric">
+              <strong>12k+</strong>
+              <span>active roles</span>
+            </div>
+            <div className="metric">
+              <strong>94%</strong>
+              <span>skill match quality</span>
+            </div>
+            <div className="metric">
+              <strong>3x</strong>
+              <span>faster talent discovery</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="jobs" className="content-section">
+          <div className="section-header">
+            <h2>Featured jobs</h2>
+            <span>{jobs.length} openings</span>
+          </div>
+
+          <div className="job-grid">
+            {jobs.map((job) => (
+              <article key={job.id} className="job-card">
+                <div className="job-topline">
+                  <span className="company">{job.company}</span>
+                  <span className="salary">{job.salary}</span>
+                </div>
+                <h3>{job.title}</h3>
+                <p className="location">{job.location}</p>
+                <p className="description">{job.description}</p>
+
+                <div className="tag-list">
+                  {job.skills.split(',').map((tag, index) => (
+                    <span key={`${job.id}-${index}`} className="tag">{tag.trim()}</span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="matches" className="content-section">
+          <div className="section-header">
+            <h2>AI job matches</h2>
+            <span>{matches.length} ranked results</span>
+          </div>
+
+          {loading ? (
+            <div className="loading-box">Matching jobs...</div>
+          ) : (
+            <div className="match-list">
+              {matches.map((match) => (
+                <div key={match.job_id} className="match-card">
+                  <div className="match-header">
+                    <h3>{match.title}</h3>
+                    <span>{(match.score * 100).toFixed(0)}%</span>
+                  </div>
+                  <p>{match.company}</p>
+                  <small>{match.location}</small>
+                  <div className="tag-list">
+                    {match.skills.split(',').map((tag, index) => (
+                      <span key={`${match.job_id}-${index}`} className="tag">{tag.trim()}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section id="about" className="content-section about-box">
+          <h2>Why JobHive AI?</h2>
+          <p>
+            We combine skill intelligence, role context, and career intent to help people discover opportunities that fit their strengths and aspirations.
+          </p>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export default App;
